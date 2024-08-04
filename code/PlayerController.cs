@@ -94,6 +94,8 @@ public sealed class PlayerController : Component
 	[Property, ToggleGroup("CameraRollEnabled")] float CameraRollAngleLimit {get;set;} = 30f;
 	float sidetiltLerp = 0f;
 
+	double slide_time = -0.0;
+
 	// Fucntions to make things slightly nicer
 
 	public void Punch(in Vector3 amount) {
@@ -233,19 +235,23 @@ public sealed class PlayerController : Component
 
 		var ToggleFric = true;
 
+		var crouch_in = "Slow";
+		var tfric_in = "Duck";
+
 		if (ToggleFric) {
-			if (Input.Pressed("Slow")) IsNoFric = !IsNoFric;
+			if (Input.Pressed(tfric_in)) IsNoFric = !IsNoFric;
 		} else {
-			IsNoFric = Input.Down("Slow");
+			IsNoFric = Input.Down(tfric_in);
 		}
+
 
 		if (ToggleCrouch) {
-			if (Input.Pressed("Duck")) IsCrouching = !IsCrouching;
+			if (Input.Pressed(crouch_in)) IsCrouching = !IsCrouching;
 		} else {
-			IsCrouching = Input.Down("Duck");
+			IsCrouching = Input.Down(crouch_in);
 		}
 
-		if (Input.Pressed("Duck") || Input.Released("Duck")) CrouchTime += CrouchCost;
+		if (Input.Pressed(crouch_in) || Input.Released(crouch_in)) CrouchTime += CrouchCost;
 	}
 
 	private void UpdateCitizenAnims() {
@@ -282,7 +288,19 @@ public sealed class PlayerController : Component
 			} else {
 				control = speed;
 			}
-			drop += control * Friction * Time.Delta; // Add the amount to the drop amount.
+			var dfric = Friction;
+			if (IsCrouching) {
+				var sld_p = slide_time - 0.068;
+				if (sld_p < 0) sld_p = 0;
+				var dfric_mult = Math.Pow(sld_p, 3);
+				if (dfric_mult < 1) {
+					dfric *= (float)dfric_mult;
+				}
+				slide_time += Time.Delta;
+			}
+			drop += control * dfric * Time.Delta; // Add the amount to the drop amount.
+		} else {
+			slide_time = 0.0;
 		}
 
 		// Scale the velocity
@@ -296,6 +314,9 @@ public sealed class PlayerController : Component
 		{
 			newspeed /= speed; // Determine proportion of old speed we are using.
 			Velocity *= newspeed; // Adjust velocity according to proportion.
+		}
+		if (!IsCrouching) {
+			slide_time = 0.0;
 		}
 	}
 
@@ -353,19 +374,33 @@ public sealed class PlayerController : Component
 			var velxy = new Vector2(Velocity.x, Velocity.y);
 			var dot = Vector3.Dot(look_vel.Normal, velxy.Normal);
 			Log.Info(dot);
-			Log.Info(velxy);
+			Log.Info("velxy "+velxy.ToString());
 			Log.Info(look_vel);
+			Log.Info("look a a "+LookAngleAngles.Normal.ToString());
 			if (dot <= 0.01 && Velocity.Length > 0.001) {
 				var speed = Velocity.Length;
+				Log.Info("speed: "+speed.ToString());
 				var speedm = UtoMeter(speed);
-				var addmult = 0.3;
+				Log.Info("speedm: "+speedm.ToString());
+				var addmult = 1.3;
 				if (IsCrouching) {
-					addmult = 1.5;
+					addmult = 100.5;
 				}
-				var add = (float)MeterToU(speedm * addmult);
-				var newspeed = speed + add;
-				newspeed /= speed;
-				Velocity *= newspeed;
+				var spdmam = speedm+addmult;
+				Log.Info("speedm_amult: "+(spdmam).ToString());
+				var add = (float)MeterToU(spdmam);
+				Log.Info("add: "+add.ToString());
+				Log.Info("mtou test: "+MeterToU(10).ToString());
+				var newspeed = add;
+				//var newspeed = 1;
+				var addvec = -LookAngleAngles.WithPitch(0).Forward;
+				addvec *= newspeed;
+				Log.Info("velocity: "+Velocity.ToString());
+				Log.Info("addvec: "+addvec.ToString());
+				Log.Info("newspeed: "+newspeed.ToString());
+				Log.Info("delta: "+Time.Delta.ToString());
+
+				Velocity += addvec;
 
 			}
 
