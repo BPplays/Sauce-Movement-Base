@@ -412,11 +412,11 @@ public sealed class PlayerController : Component
 				Log.Info("speed: "+speed.ToString());
 				var speedm = UtoMeter(speed);
 				Log.Info("speedm: "+speedm.ToString());
-				var addmult = 1.3;
+				var addmult = 0.5;
 				if (IsCrouching) {
-					addmult = 100.5;
+					addmult = 1.0;
 				}
-				var spdmam = speedm+addmult;
+				var spdmam = speedm*addmult;
 				Log.Info("speedm_amult: "+(spdmam).ToString());
 				var add = (float)MeterToU(spdmam);
 				Log.Info("add: "+add.ToString());
@@ -470,6 +470,13 @@ public sealed class PlayerController : Component
 	}
 
 	protected override void OnFixedUpdate() {
+
+	}
+
+	double slide_over = 0;
+
+	protected override void OnUpdate() {
+
 		if (CollisionBox == null) return;
 
 		if (CollisionBox.Scale != LastSize) {
@@ -562,12 +569,6 @@ public sealed class PlayerController : Component
 		if (Velocity.Length > term_vel) Velocity = Velocity.Normal * term_vel;
 
 		if (jumpHighestHeight < GameObject.Transform.Position.z) jumpHighestHeight = GameObject.Transform.Position.z;
-	}
-
-	double slide_over = 0;
-
-	protected override void OnUpdate() {
-
 		if (Velocity.Length > 10) {
 			can_slide = true;
 		}
