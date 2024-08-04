@@ -231,15 +231,18 @@ public sealed class PlayerController : Component
 
 	private void crouch(string crouch_in) {
 
-		if (can_slide) {
-			IsSliding = true;
-		} else {
-		}
-
 		if (ToggleCrouch) {
-			if (Input.Pressed(crouch_in)) IsCrouching = !IsCrouching;
+			if (Input.Pressed(crouch_in)){
+				IsCrouching = !IsCrouching;
+				if (can_slide) {
+					IsSliding = true;
+				}
+			}
 		} else {
 			IsCrouching = Input.Down(crouch_in);
+			if (can_slide && Input.Down(crouch_in)) {
+				IsSliding = true;
+			}
 		}
 	}
 
@@ -265,11 +268,9 @@ public sealed class PlayerController : Component
 			can_slide = true;
 		}
 
-		if (ToggleCrouch) {
-			if (Input.Pressed(crouch_in)) IsCrouching = !IsCrouching;
-		} else {
-			IsCrouching = Input.Down(crouch_in);
-		}
+
+		crouch(crouch_in);
+
 
 		if (Input.Pressed(crouch_in) || Input.Released(crouch_in)) CrouchTime += CrouchCost;
 	}
@@ -330,7 +331,7 @@ public sealed class PlayerController : Component
 			}
 			drop += control * dfric * Time.Delta; // Add the amount to the drop amount.
 		} else {
-			slide_time = 0.0;
+			IsSliding = false;
 		}
 
 		// Scale the velocity
@@ -346,7 +347,7 @@ public sealed class PlayerController : Component
 			Velocity *= newspeed; // Adjust velocity according to proportion.
 		}
 		if (!IsCrouching) {
-			slide_time = 0.0;
+			IsSliding = false;
 		}
 	}
 
@@ -495,6 +496,10 @@ public sealed class PlayerController : Component
 
 		GatherInput();
 
+		if (!IsSliding) {
+			slide_time = 0.0;
+		}
+
 		// Crouching
 		var InitHeight = HeightGoal;
 		if (IsCrouching) {
@@ -520,6 +525,10 @@ public sealed class PlayerController : Component
 		if (IsCrouching) InternalMoveSpeed = CrouchSpeed;
 		InternalMoveSpeed *= StaminaMultiplier * Weight;
 
+
+		var ctime = 0.02f;
+		MinCrouchTime = ctime;
+		MaxCrouchTime = ctime;
 		Height = Height.LerpTo(HeightGoal, Time.Delta / CrouchTime.Clamp(MinCrouchTime, MaxCrouchTime));
 
 		LastSize = new Vector3(Radius * 2, Radius * 2, HeightGoal);
@@ -573,7 +582,6 @@ public sealed class PlayerController : Component
 			can_slide = true;
 		}
 
-		GatherInput();
 		if (IsSliding) {
 
 			slide_over = slide_time - 0.068;
