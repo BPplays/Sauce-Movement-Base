@@ -94,7 +94,8 @@ public sealed class PlayerController : Component
 	[Property, ToggleGroup("CameraRollEnabled")] float CameraRollAngleLimit {get;set;} = 30f;
 	float sidetiltLerp = 0f;
 
-	double slide_time = -0.0;
+	bool IsSliding = false;
+	double slide_time = 0.0;
 
 	// Fucntions to make things slightly nicer
 
@@ -226,6 +227,22 @@ public sealed class PlayerController : Component
 		return m * utom;
 	}
 
+	bool can_slide = true;
+
+	private void crouch(string crouch_in) {
+
+		if (can_slide) {
+			IsSliding = true;
+		} else {
+		}
+
+		if (ToggleCrouch) {
+			if (Input.Pressed(crouch_in)) IsCrouching = !IsCrouching;
+		} else {
+			IsCrouching = Input.Down(crouch_in);
+		}
+	}
+
 	private void GatherInput() {
 		WishDir = 0;
 
@@ -244,6 +261,9 @@ public sealed class PlayerController : Component
 			IsNoFric = Input.Down(tfric_in);
 		}
 
+		if (!IsCrouching && IsOnGround) {
+			can_slide = true;
+		}
 
 		if (ToggleCrouch) {
 			if (Input.Pressed(crouch_in)) IsCrouching = !IsCrouching;
@@ -256,15 +276,31 @@ public sealed class PlayerController : Component
 
 	private void UpdateCitizenAnims() {
 		if (animationHelper == null) return;
+		var sld_p = slide_time - 0.068;
+		if (sld_p < 0) sld_p = 0;
+		var dfric_mult = Math.Pow(sld_p, 3);
+		var IsSliding = false;
+		if (dfric_mult < 1 && slide_time > 0) {
+			IsSliding = true;
+		}
 
-		animationHelper.WithWishVelocity(WishDir * InternalMoveSpeed);
-		animationHelper.WithVelocity(Velocity);
+		if (IsSliding) {
+			animationHelper.WithWishVelocity(0);
+			animationHelper.WithVelocity(0);
+		} else {
+			animationHelper.WithWishVelocity(WishDir * InternalMoveSpeed);
+			animationHelper.WithVelocity(Velocity);
+		}
+
 		animationHelper.AimAngle = SmoothLookAngleAngles.ToRotation();
 		animationHelper.IsGrounded = IsOnGround;
 		animationHelper.WithLook(SmoothLookAngleAngles.Forward, 1f, 0.75f, 0.5f);
 		animationHelper.MoveStyle = CitizenAnimationHelper.MoveStyles.Auto;
 		animationHelper.DuckLevel = ((1 - (Height / StandingHeight)) * 3).Clamp(0, 1);
+
 	}
+
+
 
 	// Source engine magic functions
 
@@ -289,14 +325,8 @@ public sealed class PlayerController : Component
 				control = speed;
 			}
 			var dfric = Friction;
-			if (IsCrouching) {
-				var sld_p = slide_time - 0.068;
-				if (sld_p < 0) sld_p = 0;
-				var dfric_mult = Math.Pow(sld_p, 3);
-				if (dfric_mult < 1) {
-					dfric *= (float)dfric_mult;
-				}
-				slide_time += Time.Delta;
+			if (IsSliding) {
+				dfric *= (float)slide_over;
 			}
 			drop += control * dfric * Time.Delta; // Add the amount to the drop amount.
 		} else {
@@ -534,7 +564,25 @@ public sealed class PlayerController : Component
 		if (jumpHighestHeight < GameObject.Transform.Position.z) jumpHighestHeight = GameObject.Transform.Position.z;
 	}
 
+	double slide_over = 0;
+
 	protected override void OnUpdate() {
+
+		if (Velocity.Length > 10) {
+			can_slide = true;
+		}
+
+		GatherInput();
+		if (IsSliding) {
+
+			slide_over = slide_time - 0.068;
+			if (slide_over < 0) slide_over = 0;
+			slide_over = Math.Pow(slide_over, 3);
+			if (slide_over > 1) {
+				IsSliding = false;
+			}
+			slide_time += Time.Delta;
+		}
 		UpdateCitizenAnims();
 
 		if (Body == null || Camera == null || BodyRenderer == null) return;
