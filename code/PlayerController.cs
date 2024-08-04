@@ -52,7 +52,7 @@ public sealed class PlayerController : Component
 
 	// State Bools
 	[Sync] public bool IsCrouching {get;set;} = false;
-	public bool IsWalking = false;
+	public bool IsNoFric = false;
 	[Sync] public bool IsOnGround {get;set;} = false;
 
 	// Internal objects
@@ -222,7 +222,14 @@ public sealed class PlayerController : Component
 		WishDir = (rot.Forward * Input.AnalogMove.x) + (rot.Left * Input.AnalogMove.y);
 		if (!WishDir.IsNearZeroLength) WishDir = WishDir.Normal;
 
-		IsWalking = Input.Down("Slow");
+		var ToggleFric = true;
+
+		if (ToggleFric) {
+			if (Input.Pressed("Slow")) IsNoFric = !IsNoFric;
+		} else {
+			IsNoFric = Input.Down("Slow");
+		}
+
 		if (ToggleCrouch) {
 			if (Input.Pressed("Duck")) IsCrouching = !IsCrouching;
 		} else {
@@ -270,7 +277,7 @@ public sealed class PlayerController : Component
 		}
 
 		// Scale the velocity
-		if (isWalking) {
+		if (IsNoFric) {
 			drop = 0;
 		}
 		newspeed = speed - drop;
@@ -321,6 +328,10 @@ public sealed class PlayerController : Component
 		if (AlreadyGrounded == IsOnGround) {
 			Accelerate(WishDir, WishDir.Length * InternalMoveSpeed, Acceleration);
 		}
+		MaxSpeed = 10000;
+		AirAcceleration = 500;
+		MoveSpeed = 500;
+		CustomFOV = 120;
 		if (Velocity.WithZ(0).Length > MaxSpeed) {
 			var FixedVel = Velocity.WithZ(0).Normal * MaxSpeed;
 			Velocity = Velocity.WithX(FixedVel.x).WithY(FixedVel.y);
@@ -335,6 +346,11 @@ public sealed class PlayerController : Component
 			Stamina -= Stamina * StaminaJumpCost * 2.9625f;
 			Stamina = (Stamina * 10).FloorToInt() * 0.1f;
 			if (Stamina < 0) Stamina = 0;
+			var look_vel = LookAngleAngles.WithPitch(0).Forward;
+			var velxy = new Vector2(Velocity.x, Velocity.y);
+			Log.Info(Vector3.Dot(look_vel.Normal, velxy.Normal));
+			Log.Info(velxy);
+			Log.Info(look_vel);
 		}
 	}
 
