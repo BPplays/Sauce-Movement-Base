@@ -215,6 +215,15 @@ public sealed class PlayerController : Component
 		return source.Size(in hull).WithoutTags(IgnoreLayers).IgnoreGameObjectHierarchy(base.GameObject);
 	}
 
+	private double UtoMeter(double u) {
+		var utom = 32768 / 624.23;
+		return u / utom;
+	}
+	private double MeterToU(double m) {
+		var utom = 32768 / 624.23;
+		return m * utom;
+	}
+
 	private void GatherInput() {
 		WishDir = 0;
 
@@ -328,7 +337,7 @@ public sealed class PlayerController : Component
 		if (AlreadyGrounded == IsOnGround) {
 			Accelerate(WishDir, WishDir.Length * InternalMoveSpeed, Acceleration);
 		}
-		MaxSpeed = 10000;
+		MaxSpeed = 1000000;
 		AirAcceleration = 500;
 		MoveSpeed = 500;
 		CustomFOV = 120;
@@ -346,9 +355,14 @@ public sealed class PlayerController : Component
 			Log.Info(dot);
 			Log.Info(velxy);
 			Log.Info(look_vel);
-			if (dot <= 0.01) {
+			if (dot <= 0.01 && Velocity.Length > 0.001) {
 				var speed = Velocity.Length;
-				var add = 1;
+				var speedm = UtoMeter(speed);
+				var addmult = 0.3;
+				if (IsCrouching) {
+					addmult = 1.5;
+				}
+				var add = (float)MeterToU(speedm * addmult);
 				var newspeed = speed + add;
 				newspeed /= speed;
 				Velocity *= newspeed;
@@ -479,7 +493,8 @@ public sealed class PlayerController : Component
 		Velocity += Gravity * Time.Delta * 0.5f;
 
 		// Terminal velocity
-		if (Velocity.Length > 3500) Velocity = Velocity.Normal * 3500;
+		var term_vel = 9999999;
+		if (Velocity.Length > term_vel) Velocity = Velocity.Normal * term_vel;
 
 		if (jumpHighestHeight < GameObject.Transform.Position.z) jumpHighestHeight = GameObject.Transform.Position.z;
 	}
