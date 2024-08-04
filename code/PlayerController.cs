@@ -339,6 +339,23 @@ public sealed class PlayerController : Component
 		if (Velocity.z < 0) Velocity = Velocity.WithZ(0);
 
 		if ((AutoBunnyhopping && Input.Down("Jump")) || Input.Pressed("Jump")) {
+
+			var look_vel = LookAngleAngles.WithPitch(0).Forward;
+			var velxy = new Vector2(Velocity.x, Velocity.y);
+			var dot = Vector3.Dot(look_vel.Normal, velxy.Normal);
+			Log.Info(dot);
+			Log.Info(velxy);
+			Log.Info(look_vel);
+			if (dot <= 0.01) {
+				var speed = Velocity.Length;
+				var add = 1;
+				var newspeed = speed + add;
+				newspeed /= speed;
+				Velocity *= newspeed;
+
+			}
+
+
 			jumpStartHeight = GameObject.Transform.Position.z;
 			jumpHighestHeight = GameObject.Transform.Position.z;
 			animationHelper.TriggerJump();
@@ -346,11 +363,6 @@ public sealed class PlayerController : Component
 			Stamina -= Stamina * StaminaJumpCost * 2.9625f;
 			Stamina = (Stamina * 10).FloorToInt() * 0.1f;
 			if (Stamina < 0) Stamina = 0;
-			var look_vel = LookAngleAngles.WithPitch(0).Forward;
-			var velxy = new Vector2(Velocity.x, Velocity.y);
-			Log.Info(Vector3.Dot(look_vel.Normal, velxy.Normal));
-			Log.Info(velxy);
-			Log.Info(look_vel);
 		}
 	}
 
