@@ -230,6 +230,8 @@ public sealed class PlayerController : Component
 	bool can_slide = true;
 
 	private void crouch(string crouch_in) {
+		var st_cr = IsCrouching;
+		if (IsCrouching && IsOnGround) can_slide = false;
 
 		if (ToggleCrouch) {
 			if (Input.Pressed(crouch_in)){
@@ -535,7 +537,7 @@ public sealed class PlayerController : Component
 
 		Velocity += Gravity * Time.Delta * 0.5f;
 
-		if (AlreadyGrounded != IsOnGround) {
+		if (AlreadyGrounded != IsOnGround && false) {
 			if (IsOnGround) {
 				var heightMult = Math.Abs(jumpHighestHeight - GameObject.Transform.Position.z) / 46f;
 				Stamina -= Stamina * StaminaLandingCost * 2.9625f * heightMult.Clamp(0, 1f);
@@ -578,20 +580,24 @@ public sealed class PlayerController : Component
 		if (Velocity.Length > term_vel) Velocity = Velocity.Normal * term_vel;
 
 		if (jumpHighestHeight < GameObject.Transform.Position.z) jumpHighestHeight = GameObject.Transform.Position.z;
-		if (Velocity.Length > 10) {
+
+		can_slide = false;
+		if (!IsCrouching && Velocity.Length > 85) {
 			can_slide = true;
 		}
 
 		if (IsSliding) {
-
 			slide_over = slide_time - 0.068;
 			if (slide_over < 0) slide_over = 0;
-			slide_over = Math.Pow(slide_over, 3);
+			slide_over = Math.Pow(slide_over*1.2, 4);
 			if (slide_over > 1) {
 				IsSliding = false;
 			}
 			slide_time += Time.Delta;
+		} else {
+			slide_time = 0.0;
 		}
+
 		UpdateCitizenAnims();
 
 		if (Body == null || Camera == null || BodyRenderer == null) return;
