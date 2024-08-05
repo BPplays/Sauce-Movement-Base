@@ -219,11 +219,13 @@ public sealed class PlayerController : Component
 	}
 
 	private double UtoMeter(double u) {
-		var utom = 32768 / 624.23;
+		//var utom = 32768 / 624.23;
+		var utom = 39.37;
 		return u / utom;
 	}
 	private double MeterToU(double m) {
-		var utom = 32768 / 624.23;
+		//var utom = 32768 / 624.23;
+		var utom = 39.37;
 		return m * utom;
 	}
 
@@ -268,6 +270,8 @@ public sealed class PlayerController : Component
 
 		if (!IsCrouching && IsOnGround) {
 			can_slide = true;
+		} else {
+			can_slide = false;
 		}
 
 
@@ -287,9 +291,10 @@ public sealed class PlayerController : Component
 			IsSliding = true;
 		}
 
-		if (IsSliding) {
+		if (IsSliding || IsNoFric) {
 			animationHelper.WithWishVelocity(0);
-			animationHelper.WithVelocity(0);
+			// animationHelper.WithVelocity(0);
+			animationHelper.WithVelocity(WishDir * InternalMoveSpeed);
 		} else {
 			animationHelper.WithWishVelocity(WishDir * InternalMoveSpeed);
 			animationHelper.WithVelocity(Velocity);
@@ -387,13 +392,17 @@ public sealed class PlayerController : Component
 		Velocity += wishDir * accelspeed;
 	}
 
+
+	Vector3 smooth_velo;
+
+
 	private void GroundMove() {
 		if (AlreadyGrounded == IsOnGround) {
 			Accelerate(WishDir, WishDir.Length * InternalMoveSpeed, Acceleration);
 		}
 		MaxSpeed = 1000000;
-		AirAcceleration = 500;
-		MoveSpeed = 500;
+		AirAcceleration = (float)MeterToU(15);
+		MoveSpeed = (float)MeterToU(15);
 		CustomFOV = 120;
 		if (Velocity.WithZ(0).Length > MaxSpeed) {
 			var FixedVel = Velocity.WithZ(0).Normal * MaxSpeed;
@@ -403,6 +412,7 @@ public sealed class PlayerController : Component
 
 		if ((AutoBunnyhopping && Input.Down("Jump")) || Input.Pressed("Jump")) {
 
+			IsSliding = false;
 			var look_vel = LookAngleAngles.WithPitch(0).Forward;
 			var velxy = new Vector2(Velocity.x, Velocity.y);
 			var dot = Vector3.Dot(look_vel.Normal, velxy.Normal);
@@ -410,7 +420,7 @@ public sealed class PlayerController : Component
 			Log.Info("velxy "+velxy.ToString());
 			Log.Info(look_vel);
 			Log.Info("look a a "+LookAngleAngles.Normal.ToString());
-			if (dot <= 0.01 && Velocity.Length > 0.001) {
+			if (dot <= -0.01 && Velocity.Length > 0.001) {
 				var speed = Velocity.Length;
 				Log.Info("speed: "+speed.ToString());
 				var speedm = UtoMeter(speed);
@@ -425,14 +435,31 @@ public sealed class PlayerController : Component
 				Log.Info("add: "+add.ToString());
 				Log.Info("mtou test: "+MeterToU(10).ToString());
 				var newspeed = add;
+				var mult_loss = 0.0f;
 				//var newspeed = 1;
+				var abh_up = true;
+				Vector3 nvec;
+
 				var addvec = -LookAngleAngles.WithPitch(0).Forward;
+				if (abh_up) {
+
+					Log.Info("pitch: "+LookAngleAngles.pitch.ToString());
+					if (LookAngleAngles.pitch < 15) {
+						addvec = -LookAngleAngles.WithPitch(0).Forward;
+					} else {
+						Log.Info("uppies yey!");
+						//nvec =
+						addvec = -LookAngleAngles.Forward;
+					}
+				}
+
 				addvec *= newspeed;
 				Log.Info("velocity: "+Velocity.ToString());
 				Log.Info("addvec: "+addvec.ToString());
 				Log.Info("newspeed: "+newspeed.ToString());
 				Log.Info("delta: "+Time.Delta.ToString());
 
+				if (mult_loss > 0) Velocity *= mult_loss;
 				Velocity += addvec;
 
 			}
@@ -537,8 +564,13 @@ public sealed class PlayerController : Component
 
 		Velocity += Gravity * Time.Delta * 0.5f;
 
-		if (AlreadyGrounded != IsOnGround && false) {
+		if (AlreadyGrounded != IsOnGround) {
 			if (IsOnGround) {
+				can_slide = true;
+				if (IsCrouching) {
+					IsSliding = true;
+					slide_time = 0.0;
+				}
 				var heightMult = Math.Abs(jumpHighestHeight - GameObject.Transform.Position.z) / 46f;
 				Stamina -= Stamina * StaminaLandingCost * 2.9625f * heightMult.Clamp(0, 1f);
 				Stamina = (Stamina * 10).FloorToInt() * 0.1f;
@@ -553,10 +585,12 @@ public sealed class PlayerController : Component
 
 		if(IsOnGround) {
 			GroundMove();
-			Camera.Components.Get<TestUI>().Speed = Velocity.Length.CeilToInt();
+			Camera.Components.Get<TestUI>().Speed = UtoMeter(Velocity.WithZ(0).Length).ToString("0.##");
+			Camera.Components.Get<TestUI>().Mesurement = "m/s";
 		} else {
 			AirMove();
-			Camera.Components.Get<TestUI>().Speed = Velocity.WithZ(0).Length.CeilToInt();
+			Camera.Components.Get<TestUI>().Speed = UtoMeter(Velocity.WithZ(0).Length).ToString("0.##");
+			Camera.Components.Get<TestUI>().Mesurement = "m/s";
 		}
 
 		AlreadyGrounded = IsOnGround;
@@ -594,9 +628,12 @@ public sealed class PlayerController : Component
 				IsSliding = false;
 			}
 			slide_time += Time.Delta;
+			smooth_velo = Vector3.Zero;
 		} else {
 			slide_time = 0.0;
 		}
+
+		smooth_velo = smooth_velo.LerpTo(Velocity, Time.Delta / 0.085f);
 
 		UpdateCitizenAnims();
 

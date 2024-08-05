@@ -3,11 +3,12 @@
 @inherits PanelComponent
 
 <root>
-	<div class="speedometer">@Speed u/s</div>
+	<div class="speedometer">@Speed @Mesurement</div>
 </root>
 
 @code
 {
-	[Property] public int Speed { get; set; } = 0;
+	[Property] public string Speed { get; set; } = "0";
+	[Property] public string Mesurement { get; set; } = "m/s";
 	protected override int BuildHash() => System.HashCode.Combine(Speed);
 }
