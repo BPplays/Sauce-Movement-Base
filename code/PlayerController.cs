@@ -424,7 +424,7 @@ public sealed class PlayerController : Component
 			Log.Info("velxy "+velxy.ToString());
 			Log.Info(look_vel);
 			Log.Info("look a a "+LookAngleAngles.Normal.ToString());
-			if (dot <= -0.01 && Velocity.Length > 0.001) {
+			if (dot <= -0.2 && Velocity.Length > 0.001) {
 				var speed = Velocity.Length;
 				Log.Info("speed: "+speed.ToString());
 				var speedm = UtoMeter(speed);
@@ -442,18 +442,30 @@ public sealed class PlayerController : Component
 				var mult_loss = 0.0f;
 				//var newspeed = 1;
 				var abh_up = true;
-				Vector3 nvec;
+				Vector3 nvec = Vector3.Zero;
+				var usenvec = false;
 
 				var addvec = -LookAngleAngles.WithPitch(0).Forward;
 				if (abh_up) {
 
 					Log.Info("pitch: "+LookAngleAngles.pitch.ToString());
-					if (LookAngleAngles.pitch < 15) {
+					var uppies_angle = 45;
+					var loss = Math.Pow(UtoMeter(Velocity.Length) / 50, 3);
+					var loss_max = 0.45;
+					if (loss > loss_max) loss = loss_max;
+					if (loss < 0) loss = 0;
+					if (LookAngleAngles.pitch < uppies_angle) {
 						addvec = -LookAngleAngles.WithPitch(0).Forward;
 					} else {
 						Log.Info("uppies yey!");
-						//nvec =
+						usenvec = true;
+						nvec = Velocity.Normal;
 						addvec = -LookAngleAngles.Forward;
+						nvec += addvec.Normal;
+						nvec = nvec.Normal;
+						nvec *= Velocity.Length;
+						Log.Info("loss: "+loss.ToString());
+						nvec *= (float)(1 - loss);
 					}
 				}
 
@@ -465,6 +477,7 @@ public sealed class PlayerController : Component
 
 				if (mult_loss > 0) Velocity *= mult_loss;
 				Velocity += addvec;
+				if (usenvec) Velocity = nvec;
 
 			}
 
@@ -517,6 +530,7 @@ public sealed class PlayerController : Component
 
 		UseCustomFOV = true;
 		CustomFOV = 120;
+
 
 		if (CollisionBox == null) return;
 
