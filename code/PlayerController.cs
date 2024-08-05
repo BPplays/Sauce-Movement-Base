@@ -279,6 +279,10 @@ public sealed class PlayerController : Component
 
 
 		if (Input.Pressed(crouch_in) || Input.Released(crouch_in)) CrouchTime += CrouchCost;
+
+		if (!IsOnGround && Input.Pressed("Jump")) {
+			bufferj_time = bufferj_time_start;
+		}
 	}
 
 	private void UpdateCitizenAnims() {
@@ -393,7 +397,7 @@ public sealed class PlayerController : Component
 	}
 
 
-	Vector3 smooth_velo;
+	Vector3 ui_velo;
 
 
 	private void GroundMove() {
@@ -410,7 +414,7 @@ public sealed class PlayerController : Component
 		}
 		if (Velocity.z < 0) Velocity = Velocity.WithZ(0);
 
-		if ((AutoBunnyhopping && Input.Down("Jump")) || Input.Pressed("Jump")) {
+		if (((AutoBunnyhopping && Input.Down("Jump")) || Input.Pressed("Jump")) || bufferj_time > 0) {
 
 			IsSliding = false;
 			var look_vel = LookAngleAngles.WithPitch(0).Forward;
@@ -505,7 +509,14 @@ public sealed class PlayerController : Component
 
 	double slide_over = 0;
 
+	double bufferj_time = 0;
+
+	double bufferj_time_start = 0.098;
+
 	protected override void OnUpdate() {
+
+		UseCustomFOV = true;
+		CustomFOV = 120;
 
 		if (CollisionBox == null) return;
 
@@ -527,6 +538,14 @@ public sealed class PlayerController : Component
 
 		if (!IsSliding) {
 			slide_time = 0.0;
+		}
+
+		if (bufferj_time > 0) {
+			bufferj_time -= (double)Time.Delta;
+		}
+
+		if (bufferj_time < 0) {
+			bufferj_time = 0;
 		}
 
 		// Crouching
@@ -583,13 +602,16 @@ public sealed class PlayerController : Component
 			if(IsOnGround) ApplyFriction();
 		}
 
+		//ui_velo = ui_velo.LerpTo(Velocity, Time.Delta / 2);
+		ui_velo = Velocity;
 		if(IsOnGround) {
 			GroundMove();
-			Camera.Components.Get<TestUI>().Speed = UtoMeter(Velocity.WithZ(0).Length).ToString("0.##");
+			//Camera.Components.Get<TestUI>().Speed = UtoMeter(Velocity.WithZ(0).Length).ToString("0.##");
+			Camera.Components.Get<TestUI>().Speed = UtoMeter(Velocity.Length).ToString("0.##");
 			Camera.Components.Get<TestUI>().Mesurement = "m/s";
 		} else {
 			AirMove();
-			Camera.Components.Get<TestUI>().Speed = UtoMeter(Velocity.WithZ(0).Length).ToString("0.##");
+			Camera.Components.Get<TestUI>().Speed = UtoMeter(Velocity.Length).ToString("0.##");
 			Camera.Components.Get<TestUI>().Mesurement = "m/s";
 		}
 
@@ -616,7 +638,7 @@ public sealed class PlayerController : Component
 		if (jumpHighestHeight < GameObject.Transform.Position.z) jumpHighestHeight = GameObject.Transform.Position.z;
 
 		can_slide = false;
-		if (!IsCrouching && Velocity.Length > 85) {
+		if (!IsCrouching && Velocity.Length > MeterToU(4)) {
 			can_slide = true;
 		}
 
@@ -628,12 +650,11 @@ public sealed class PlayerController : Component
 				IsSliding = false;
 			}
 			slide_time += Time.Delta;
-			smooth_velo = Vector3.Zero;
+			ui_velo = Vector3.Zero;
 		} else {
 			slide_time = 0.0;
 		}
 
-		smooth_velo = smooth_velo.LerpTo(Velocity, Time.Delta / 0.085f);
 
 		UpdateCitizenAnims();
 
