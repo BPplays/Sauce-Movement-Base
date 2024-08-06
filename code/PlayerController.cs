@@ -132,7 +132,8 @@ public sealed class PlayerController : Component
 		}
 		else
 		{
-			characterControllerHelper.TryMove(Time.Delta);
+			//characterControllerHelper.TryMove(Time.Delta);
+			characterControllerHelper.TryMoveWithStep(Time.Delta, 18f * GameObject.Transform.Scale.z);
 		}
 
 		base.Transform.Position = characterControllerHelper.Position;
@@ -183,7 +184,8 @@ public sealed class PlayerController : Component
 
 	private void CategorizePosition() {
 		Vector3 position = base.Transform.Position;
-		Vector3 to = position + Vector3.Down * 2f;
+		//Vector3 to = position + Vector3.Down * 2f;
+		Vector3 to = position;
 		Vector3 from = position;
 		bool isOnGround = IsOnGround;
 		if (!IsOnGround && Velocity.z > 40f)
@@ -430,8 +432,10 @@ public sealed class PlayerController : Component
 				var speedm = UtoMeter(speed);
 				Log.Info("speedm: "+speedm.ToString());
 				var addmult = 0.5;
+				var uppies_mult = 1.0;
 				if (IsCrouching) {
 					addmult = 1.0;
+					uppies_mult = 1.5;
 				}
 				var spdmam = speedm*addmult;
 				Log.Info("speedm_amult: "+(spdmam).ToString());
@@ -466,6 +470,7 @@ public sealed class PlayerController : Component
 						nvec *= Velocity.Length;
 						Log.Info("loss: "+loss.ToString());
 						nvec *= (float)(1 - loss);
+						if (uppies_mult != 1.0) nvec *= (float)uppies_mult;
 					}
 				}
 
