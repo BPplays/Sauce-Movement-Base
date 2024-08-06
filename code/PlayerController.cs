@@ -433,9 +433,11 @@ public sealed class PlayerController : Component
 				Log.Info("speedm: "+speedm.ToString());
 				var addmult = 0.5;
 				var uppies_mult = 1.0;
+				var uppies_favor_look = 1.0;
 				if (IsCrouching) {
 					addmult = 1.0;
 					uppies_mult = 1.5;
+					uppies_favor_look = 1.6;
 				}
 				var spdmam = speedm*addmult;
 				Log.Info("speedm_amult: "+(spdmam).ToString());
@@ -465,7 +467,9 @@ public sealed class PlayerController : Component
 						usenvec = true;
 						nvec = Velocity.Normal;
 						addvec = -LookAngleAngles.Forward;
-						nvec += addvec.Normal;
+						addvec = addvec.Normal;
+						if (uppies_favor_look != 1.0)addvec *= (float)uppies_favor_look;
+						nvec += addvec;
 						nvec = nvec.Normal;
 						nvec *= Velocity.Length;
 						Log.Info("loss: "+loss.ToString());
