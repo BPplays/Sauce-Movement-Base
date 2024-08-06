@@ -122,9 +122,13 @@ public sealed class PlayerController : Component
 			return;
 		}
 
+		if (test_speed) Velocity += Vector3.Left * (float)MeterToU(100000);
+		if (test_speed3) Velocity += Vector3.Left * (float)MeterToU(8500);
+		if (test_speed2) Velocity = Vector3.Zero;
+
 		Vector3 position = base.GameObject.Transform.Position;
 		CharacterControllerHelper characterControllerHelper = new CharacterControllerHelper(BuildTrace(position, position), position, Velocity);
-		characterControllerHelper.Bounce = 0;
+		characterControllerHelper.Bounce = 10;
 		characterControllerHelper.MaxStandableAngle = 45.5f;
 		if (step && IsOnGround)
 		{
@@ -132,8 +136,10 @@ public sealed class PlayerController : Component
 		}
 		else
 		{
-			//characterControllerHelper.TryMove(Time.Delta);
-			characterControllerHelper.TryMoveWithStep(Time.Delta, 8f * GameObject.Transform.Scale.z);
+			characterControllerHelper.TryMove(Time.Delta);
+			//Velocity = characterControllerHelper.Velocity;
+			//characterControllerHelper.TryMoveWithStep(Time.Delta, 2f * GameObject.Transform.Scale.z);
+			//IsOnGround = false;
 		}
 
 		base.Transform.Position = characterControllerHelper.Position;
@@ -202,7 +208,7 @@ public sealed class PlayerController : Component
 			return;
 		}
 
-		IsOnGround = true;
+		if (Velocity.Normal.z < 0)IsOnGround = true;
 		// GroundObject = sceneTraceResult.GameObject;
 		// GroundCollider = sceneTraceResult.Shape?.Collider as Collider;
 		if (isOnGround && !sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f)
@@ -252,6 +258,9 @@ public sealed class PlayerController : Component
 		}
 	}
 
+	bool test_speed = false;
+	bool test_speed2 = false;
+	bool test_speed3 = false;
 	private void GatherInput() {
 		WishDir = 0;
 
@@ -263,6 +272,10 @@ public sealed class PlayerController : Component
 
 		var crouch_in = "Slow";
 		var tfric_in = "Duck";
+
+		if (Input.Pressed("Test_speed")) {test_speed = true; Log.Info("t");}
+		if (Input.Pressed("Test_speed2")) {test_speed2 = true; Log.Info("t");}
+		if (Input.Pressed("Test_speed3")) {test_speed3 = true; Log.Info("t");}
 
 		if (ToggleFric) {
 			if (Input.Pressed(tfric_in)) IsNoFric = !IsNoFric;
@@ -313,7 +326,62 @@ public sealed class PlayerController : Component
 		animationHelper.DuckLevel = ((1 - (Height / StandingHeight)) * 3).Clamp(0, 1);
 
 	}
+	public struct si_prefix {
+		public string Name { get; set; }
+		public string ShortName { get; set; }
+		public int Power { get; set; }
 
+		// Constructor to initialize the struct
+		public si_prefix(string name, string shortName, int power)
+		{
+			Name = name;
+			ShortName = shortName;
+			Power = power;
+		}
+
+		// Optionally, you can override ToString for better debugging
+		public override string ToString()
+		{
+			return $"Name: {Name}, ShortName: {ShortName}, Power: {Power}";
+		}
+	}
+
+	private void update_spedometer() {
+		var ui_velo = Velocity.Length;
+
+		var prefixes = new List<si_prefix> {
+			new si_prefix("None", "", 0),
+			new si_prefix("kilo", "k", 3),
+			new si_prefix("mega", "M", 6)
+		};
+
+		var use_prefix = prefixes[0];
+
+		for (int i = 0; true; i++) {
+
+			if (i >= prefixes.Count) {
+				break;
+			}
+
+			var pp = UtoMeter(Velocity.Length) / Math.Pow(10, prefixes[i].Power);
+			if (pp < 10000) {
+				// Log.Info("pp: "+pp.ToString());
+				use_prefix = prefixes[i];
+				break;
+			}
+		}
+
+		if(IsOnGround) {
+			GroundMove();
+			//Camera.Components.Get<TestUI>().Speed = UtoMeter(Velocity.WithZ(0).Length).ToString("0.##");
+			Camera.Components.Get<TestUI>().Speed = UtoMeter(Velocity.Length / Math.Pow(10, use_prefix.Power)).ToString("0.##");
+			Camera.Components.Get<TestUI>().Mesurement = use_prefix.ShortName+"m/s";
+		} else {
+			AirMove();
+			Camera.Components.Get<TestUI>().Speed = UtoMeter(Velocity.Length / Math.Pow(10, use_prefix.Power)).ToString("0.##");
+			Camera.Components.Get<TestUI>().Mesurement = use_prefix.ShortName+"m/s";
+		}
+	}
 
 
 	// Source engine magic functions
@@ -539,6 +607,15 @@ public sealed class PlayerController : Component
 		UseCustomFOV = true;
 		CustomFOV = 130;
 
+		test_speed = false;
+		test_speed2 = false;
+		test_speed3 = false;
+
+		UseCustomGravity = false;
+		CustomGravity = Vector3.Down * (float)MeterToU(9.80665);
+
+		Camera.ZFar = 200000;
+
 
 		if (CollisionBox == null) return;
 
@@ -625,17 +702,7 @@ public sealed class PlayerController : Component
 		}
 
 		//ui_velo = ui_velo.LerpTo(Velocity, Time.Delta / 2);
-		ui_velo = Velocity;
-		if(IsOnGround) {
-			GroundMove();
-			//Camera.Components.Get<TestUI>().Speed = UtoMeter(Velocity.WithZ(0).Length).ToString("0.##");
-			Camera.Components.Get<TestUI>().Speed = UtoMeter(Velocity.Length).ToString("0.##");
-			Camera.Components.Get<TestUI>().Mesurement = "m/s";
-		} else {
-			AirMove();
-			Camera.Components.Get<TestUI>().Speed = UtoMeter(Velocity.Length).ToString("0.##");
-			Camera.Components.Get<TestUI>().Mesurement = "m/s";
-		}
+		update_spedometer();
 
 		AlreadyGrounded = IsOnGround;
 
