@@ -133,7 +133,7 @@ public sealed class PlayerController : Component
 		else
 		{
 			//characterControllerHelper.TryMove(Time.Delta);
-			characterControllerHelper.TryMoveWithStep(Time.Delta, 18f * GameObject.Transform.Scale.z);
+			characterControllerHelper.TryMoveWithStep(Time.Delta, 8f * GameObject.Transform.Scale.z);
 		}
 
 		base.Transform.Position = characterControllerHelper.Position;
@@ -409,7 +409,6 @@ public sealed class PlayerController : Component
 		MaxSpeed = 1000000;
 		AirAcceleration = (float)MeterToU(15);
 		MoveSpeed = (float)MeterToU(15);
-		CustomFOV = 120;
 		if (Velocity.WithZ(0).Length > MaxSpeed) {
 			var FixedVel = Velocity.WithZ(0).Normal * MaxSpeed;
 			Velocity = Velocity.WithX(FixedVel.x).WithY(FixedVel.y);
@@ -436,7 +435,7 @@ public sealed class PlayerController : Component
 				var uppies_favor_look = 1.0;
 				if (IsCrouching) {
 					addmult = 1.0;
-					uppies_mult = 1.5;
+					uppies_mult = 1.1;
 					uppies_favor_look = 1.6;
 				}
 				var spdmam = speedm*addmult;
@@ -538,7 +537,7 @@ public sealed class PlayerController : Component
 	protected override void OnUpdate() {
 
 		UseCustomFOV = true;
-		CustomFOV = 120;
+		CustomFOV = 130;
 
 
 		if (CollisionBox == null) return;

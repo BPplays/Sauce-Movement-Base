@@ -12,7 +12,7 @@
           "__guid": "2fd47049-d703-4230-8e00-ef6243725c6e",
           "__version": 1,
           "EnableCollision": true,
-          "MapName": "facepunch.flatgrass",
+          "MapName": "softsplit.gm_bigcity",
           "NoOrigin": true,
           "UseMapFromLaunch": false
         },
@@ -78,7 +78,7 @@
       "__guid": "2fc26cb8-9044-4674-ae75-013769e5f599",
       "Flags": 0,
       "Name": "SpawnPoint",
-      "Position": "-1517.696,-487.3402,498.8713",
+      "Position": "-1004.96,-650.2208,-11121.01",
       "Enabled": true
     },
     {
