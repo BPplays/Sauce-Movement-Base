@@ -192,8 +192,8 @@ public sealed class PlayerController : Component
 
 	private void CategorizePosition() {
 		Vector3 position = base.Transform.Position;
-		//Vector3 to = position + Vector3.Down * 2f;
-		Vector3 to = position;
+		Vector3 to = position + Vector3.Down * 2f;
+		//Vector3 to = position;
 		Vector3 from = position;
 		//bool isOnGround = IsOnGround;
 		if (!IsOnGround && Velocity.z > 40f)
@@ -219,7 +219,7 @@ public sealed class PlayerController : Component
 		//Log.Info("velnz: "+Velocity.Normal.z.ToString());
 		// GroundObject = sceneTraceResult.GameObject;
 		// GroundCollider = sceneTraceResult.Shape?.Collider as Collider;
-		if (IsOnGround && !IsSliding && !IsNoFric && !sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f && GroundedTime > 0.0)
+		if (IsOnGround && !sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f && GroundedTime > 0.0)
 		{ // for some reason this fixes sliding down slopes when standing still, idek
 			base.Transform.Position = sceneTraceResult.HitPosition + (Vector3.Down * (from - to)) + (Vector3.Down * 0.1f);
 			IsOnGround = true;
