@@ -204,7 +204,7 @@ public sealed class PlayerController : Component
 			IsOnGround = true;
 		}
 
-		to.z -= (IsOnGround ? 5.3989999990f : 0.1f);
+		to.z -= (IsOnGround ? 18 : 0.1f);
 		SceneTraceResult sceneTraceResult = BuildTrace(from, to).Run();
 		if (!sceneTraceResult.Hit || Vector3.GetAngle(in Vector3.Up, in sceneTraceResult.Normal) > 45.5)
 		{
@@ -219,9 +219,10 @@ public sealed class PlayerController : Component
 		//Log.Info("velnz: "+Velocity.Normal.z.ToString());
 		// GroundObject = sceneTraceResult.GameObject;
 		// GroundCollider = sceneTraceResult.Shape?.Collider as Collider;
-		if (IsOnGround && !IsSliding && !IsNoFric && !sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f && GroundedTime > 1.1)
+		if (IsOnGround && !IsSliding && !IsNoFric && !sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f && GroundedTime > 0.0)
 		{ // for some reason this fixes sliding down slopes when standing still, idek
-			base.Transform.Position = sceneTraceResult.EndPosition + (Vector3.Down * -Height/15) + (sceneTraceResult.Normal * 0f);
+			base.Transform.Position = sceneTraceResult.HitPosition + (Vector3.Down * (from - to)) + (Vector3.Down * 2);
+			IsOnGround = true;
 		}
 	}
 
