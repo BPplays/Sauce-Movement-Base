@@ -212,7 +212,7 @@ public sealed class PlayerController : Component
 
 		to.z -= (IsOnGround ? 18 : 0.1f);
 		SceneTraceResult sceneTraceResult = BuildTrace(from, to).Run();
-		if (!sceneTraceResult.Hit || Vector3.GetAngle(in Vector3.Up, in sceneTraceResult.Normal) > 45.5) {
+		if (!sceneTraceResult.Hit || Vector3.GetAngle(in Vector3.Up, in sceneTraceResult.Normal) > 5.5) {
 			ClearGround();
 			return;
 		} else {
@@ -225,7 +225,7 @@ public sealed class PlayerController : Component
 		//Log.Info("velnz: "+Velocity.Normal.z.ToString());
 		// GroundObject = sceneTraceResult.GameObject;
 		// GroundCollider = sceneTraceResult.Shape?.Collider as Collider;
-		if ((!sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f && GroundedTime > 0.0) || true) { // for some reason this fixes sliding down slopes when standing still, idek
+		if ((IsOnGround && !sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f && GroundedTime > 0.0)) { // for some reason this fixes sliding down slopes when standing still, idek
 			base.Transform.Position = sceneTraceResult.HitPosition + (Vector3.Down * (from - to)) + (Vector3.Down * 0.1f);
 			OnGround();
 		}
@@ -592,6 +592,7 @@ public sealed class PlayerController : Component
 			Stamina = (Stamina * 10).FloorToInt() * 0.1f;
 			if (Stamina < 0) Stamina = 0;
 		}
+		CategorizePosition();
 	}
 
 	private void AirMove() {
@@ -634,6 +635,8 @@ public sealed class PlayerController : Component
 		if (IsOnGround && (GroundedTime <= (float.MaxValue / 2f))) GroundedTime += Time.Delta;
 
 		CrouchSpeed = (float)MeterToU(2.5);
+
+		StandingHeight = 72f;
 
 
 		UseCustomFOV = true;
