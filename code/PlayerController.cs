@@ -128,7 +128,7 @@ public sealed class PlayerController : Component
 
 		Vector3 position = base.GameObject.Transform.Position;
 		CharacterControllerHelper characterControllerHelper = new CharacterControllerHelper(BuildTrace(position, position), position, Velocity);
-		characterControllerHelper.Bounce = 10;
+		characterControllerHelper.Bounce = 0;
 		characterControllerHelper.MaxStandableAngle = 45.5f;
 		if (step && IsOnGround)
 		{
@@ -136,10 +136,12 @@ public sealed class PlayerController : Component
 		}
 		else
 		{
-			characterControllerHelper.TryMove(Time.Delta);
-			//Velocity = characterControllerHelper.Velocity;
-			//characterControllerHelper.TryMoveWithStep(Time.Delta, 2f * GameObject.Transform.Scale.z);
-			//IsOnGround = false;
+			//characterControllerHelper.TryMove(Time.Delta);
+			var Velocity_bu = Velocity;
+			characterControllerHelper.TryMoveWithStep(Time.Delta, 2f * GameObject.Transform.Scale.z);
+			IsOnGround = false;
+			characterControllerHelper.Velocity = Velocity_bu;
+			Velocity = Velocity_bu;
 		}
 
 		base.Transform.Position = characterControllerHelper.Position;
@@ -193,27 +195,33 @@ public sealed class PlayerController : Component
 		//Vector3 to = position + Vector3.Down * 2f;
 		Vector3 to = position;
 		Vector3 from = position;
-		bool isOnGround = IsOnGround;
+		//bool isOnGround = IsOnGround;
 		if (!IsOnGround && Velocity.z > 40f)
 		{
 			ClearGround();
 			return;
+		} else {
+			IsOnGround = true;
 		}
 
-		to.z -= (isOnGround ? 18 : 0.1f);
+		to.z -= (IsOnGround ? 5.3989999990f : 0.1f);
 		SceneTraceResult sceneTraceResult = BuildTrace(from, to).Run();
 		if (!sceneTraceResult.Hit || Vector3.GetAngle(in Vector3.Up, in sceneTraceResult.Normal) > 45.5)
 		{
 			ClearGround();
 			return;
+		} else {
+			IsOnGround = true;
 		}
 
-		if (Velocity.Normal.z < 0)IsOnGround = true;
+		//if (Velocity.Normal.z < 0) IsOnGround = true; else isOnGround = false;
+		//IsOnGround = true;
+		//Log.Info("velnz: "+Velocity.Normal.z.ToString());
 		// GroundObject = sceneTraceResult.GameObject;
 		// GroundCollider = sceneTraceResult.Shape?.Collider as Collider;
-		if (isOnGround && !sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f)
+		if (IsOnGround && !IsSliding && !IsNoFric && !sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f && GroundedTime > 1.1)
 		{ // for some reason this fixes sliding down slopes when standing still, idek
-			base.Transform.Position = sceneTraceResult.EndPosition + sceneTraceResult.Normal * 0f;
+			base.Transform.Position = sceneTraceResult.EndPosition + (Vector3.Down * -Height/15) + (sceneTraceResult.Normal * 0f);
 		}
 	}
 
@@ -318,12 +326,18 @@ public sealed class PlayerController : Component
 			animationHelper.WithWishVelocity(WishDir * InternalMoveSpeed);
 			animationHelper.WithVelocity(Velocity);
 		}
+		if (IsSliding) {
+			animationHelper.Sitting = CitizenAnimationHelper.SittingStyle.Floor;
+			animationHelper.SittingPose = 1;
+		} else {
+			animationHelper.Sitting = CitizenAnimationHelper.SittingStyle.None;
+		}
 
 		animationHelper.AimAngle = SmoothLookAngleAngles.ToRotation();
 		animationHelper.IsGrounded = IsOnGround;
 		animationHelper.WithLook(SmoothLookAngleAngles.Forward, 1f, 0.75f, 0.5f);
 		animationHelper.MoveStyle = CitizenAnimationHelper.MoveStyles.Auto;
-		animationHelper.DuckLevel = ((1 - (Height / StandingHeight)) * 3).Clamp(0, 1);
+		if (!IsSliding) animationHelper.DuckLevel = ((1 - (Height / StandingHeight)) * 3).Clamp(0, 1);
 
 	}
 	public struct si_prefix {
@@ -601,8 +615,11 @@ public sealed class PlayerController : Component
 	double bufferj_time = 0;
 
 	double bufferj_time_start = 0.098;
+	float GroundedTime = 0;
 
 	protected override void OnUpdate() {
+
+		if (IsOnGround && (GroundedTime <= (float.MaxValue / 2f))) GroundedTime += Time.Delta;
 
 		UseCustomFOV = true;
 		CustomFOV = 130;
@@ -765,7 +782,7 @@ public sealed class PlayerController : Component
 		// ControllerInput *= 25;
 		// LookAngle += new Vector2((Input.MouseDelta.y - ControllerInput.y), -(Input.MouseDelta.x + ControllerInput.x)) * Preferences.Sensitivity * 0.022f;
 		LookAngle += new Vector2((Input.MouseDelta.y), -(Input.MouseDelta.x)) * Preferences.Sensitivity * 0.022f;
-		LookAngle = LookAngle.WithX(LookAngle.x.Clamp(-89f, 89f));
+		LookAngle = LookAngle.WithX(LookAngle.x.Clamp(-89.9999f, 89.9999f));
 
 		var angles = LookAngleAngles;
 
@@ -782,6 +799,8 @@ public sealed class PlayerController : Component
 		} else {
 			Camera.FieldOfView = Preferences.FieldOfView;
 		}
+
+		if (!IsOnGround) GroundedTime = 0f;
 	}
 
 }
