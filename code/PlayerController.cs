@@ -96,6 +96,7 @@ public sealed class PlayerController : Component
 
 	bool IsSliding = false;
 	double slide_time = 0.0;
+	bool IsRampSliding = false;
 
 	// Fucntions to make things slightly nicer
 
@@ -104,8 +105,17 @@ public sealed class PlayerController : Component
 		Velocity += amount;
 	}
 
+
+	private void OnGround() {
+		if (Velocity.Dot(Vector3.Down) >= 0) {
+			IsOnGround = true;
+		}
+	}
+
 	private void ClearGround() {
-		IsOnGround = false;
+		if (true) {
+			IsOnGround = false;
+		}
 	}
 
 	// Character Controller Functions
@@ -171,16 +181,13 @@ public sealed class PlayerController : Component
 		}
 
 		int num = 20;
-		for (int i = 0; i < num; i++)
-		{
+		for (int i = 0; i < num; i++) {
 			Vector3 vector = base.Transform.Position + Vector3.Random.Normal * ((float)_stuckTries / 2f);
-			if (i == 0)
-			{
+			if (i == 0) {
 				vector = base.Transform.Position + Vector3.Up * 2f;
 			}
 
-			if (!BuildTrace(vector, vector).Run().StartedSolid)
-			{
+			if (!BuildTrace(vector, vector).Run().StartedSolid) {
 				base.Transform.Position = vector;
 				return false;
 			}
@@ -196,33 +203,31 @@ public sealed class PlayerController : Component
 		//Vector3 to = position;
 		Vector3 from = position;
 		//bool isOnGround = IsOnGround;
-		if (!IsOnGround && Velocity.z > 40f)
-		{
+		if (!IsOnGround && (Velocity.z > 4f)) {
 			ClearGround();
 			return;
 		} else {
-			IsOnGround = true;
+			OnGround();
 		}
 
 		to.z -= (IsOnGround ? 18 : 0.1f);
 		SceneTraceResult sceneTraceResult = BuildTrace(from, to).Run();
-		if (!sceneTraceResult.Hit || Vector3.GetAngle(in Vector3.Up, in sceneTraceResult.Normal) > 45.5)
-		{
+		if (!sceneTraceResult.Hit || Vector3.GetAngle(in Vector3.Up, in sceneTraceResult.Normal) > 45.5) {
 			ClearGround();
 			return;
 		} else {
-			IsOnGround = true;
+			OnGround();
 		}
 
-		//if (Velocity.Normal.z < 0) IsOnGround = true; else isOnGround = false;
-		//IsOnGround = true;
+
+		//if (Velocity.Normal.z < 0) OnGround(); else isOnGround = false;
+		//OnGround();
 		//Log.Info("velnz: "+Velocity.Normal.z.ToString());
 		// GroundObject = sceneTraceResult.GameObject;
 		// GroundCollider = sceneTraceResult.Shape?.Collider as Collider;
-		if (IsOnGround && !sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f && GroundedTime > 0.0)
-		{ // for some reason this fixes sliding down slopes when standing still, idek
+		if ((!sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f && GroundedTime > 0.0) || true) { // for some reason this fixes sliding down slopes when standing still, idek
 			base.Transform.Position = sceneTraceResult.HitPosition + (Vector3.Down * (from - to)) + (Vector3.Down * 0.1f);
-			IsOnGround = true;
+			OnGround();
 		}
 	}
 
@@ -248,9 +253,15 @@ public sealed class PlayerController : Component
 
 	bool can_slide = true;
 
+	private void CanSlide() {
+		can_slide = true;
+		slide_time = 0.0;
+	}
+
 	private void crouch(string crouch_in) {
 		var st_cr = IsCrouching;
-		if (IsCrouching && IsOnGround) can_slide = false;
+		//if (IsCrouching && IsOnGround) can_slide = false;
+		if (MeterToU(Velocity.WithZ(0).Length) < 5) can_slide = false;
 
 		if (ToggleCrouch) {
 			if (Input.Pressed(crouch_in)){
@@ -292,11 +303,11 @@ public sealed class PlayerController : Component
 			IsNoFric = Input.Down(tfric_in);
 		}
 
-		if (!IsCrouching && IsOnGround) {
-			can_slide = true;
-		} else {
-			can_slide = false;
-		}
+		// if (!IsCrouching && IsOnGround) {
+		// 	can_slide = true;
+		// } else {
+		// 	can_slide = false;
+		// }
 
 
 		crouch(crouch_in);
@@ -622,6 +633,8 @@ public sealed class PlayerController : Component
 
 		if (IsOnGround && (GroundedTime <= (float.MaxValue / 2f))) GroundedTime += Time.Delta;
 
+		CrouchSpeed = (float)MeterToU(2.5);
+
 		UseCustomFOV = true;
 		CustomFOV = 130;
 
@@ -702,11 +715,10 @@ public sealed class PlayerController : Component
 
 		if (AlreadyGrounded != IsOnGround) {
 			if (IsOnGround) {
-				can_slide = true;
-				if (IsCrouching) {
-					IsSliding = true;
-					slide_time = 0.0;
-				}
+				CanSlide();
+				slide_time = 0.0;
+
+				GatherInput();
 				var heightMult = Math.Abs(jumpHighestHeight - GameObject.Transform.Position.z) / 46f;
 				Stamina -= Stamina * StaminaLandingCost * 2.9625f * heightMult.Clamp(0, 1f);
 				Stamina = (Stamina * 10).FloorToInt() * 0.1f;
