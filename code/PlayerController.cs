@@ -147,11 +147,11 @@ public sealed class PlayerController : Component
 		else
 		{
 			//characterControllerHelper.TryMove(Time.Delta);
-			var Velocity_bu = Velocity;
+			// var Velocity_bu = Velocity;
 			characterControllerHelper.TryMoveWithStep(Time.Delta, 2f * GameObject.Transform.Scale.z);
 			IsOnGround = false;
-			characterControllerHelper.Velocity = Velocity_bu;
-			Velocity = Velocity_bu;
+			// characterControllerHelper.Velocity = Velocity_bu;
+			// Velocity = Velocity_bu;
 		}
 
 		base.Transform.Position = characterControllerHelper.Position;
@@ -634,6 +634,7 @@ public sealed class PlayerController : Component
 		if (IsOnGround && (GroundedTime <= (float.MaxValue / 2f))) GroundedTime += Time.Delta;
 
 		CrouchSpeed = (float)MeterToU(2.5);
+
 
 		UseCustomFOV = true;
 		CustomFOV = 130;
