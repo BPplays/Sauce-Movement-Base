@@ -150,9 +150,9 @@ public sealed class PlayerController : Component
 		CharacterControllerHelper characterControllerHelper = new CharacterControllerHelper(BuildTrace(position, position), position, Velocity);
 		characterControllerHelper.Bounce = 0;
 
-		var max_stand_angle_lerp = range(UtoMeter(Velocity.Length), 15, 30);
+		var max_stand_angle_lerp = range(UtoMeter(Velocity.Length), 15, 40);
 		var max_stand_angle_min = 45.5;
-		var max_stand_angle_max = 10;
+		var max_stand_angle_max = 5;
 		max_stand_angle = Lerp(max_stand_angle_min, max_stand_angle_max, max_stand_angle_lerp);
 		characterControllerHelper.MaxStandableAngle = (float)max_stand_angle;
 
@@ -825,6 +825,7 @@ public sealed class PlayerController : Component
 
 		var angles = LookAngleAngles;
 
+		CameraRollEnabled = false;
 		if (CameraRollEnabled) {
 			sidetiltLerp = sidetiltLerp.LerpTo(Velocity.Cross(angles.Forward).z * CameraRollDamping * (Velocity.WithZ(0).Length / MoveSpeed), Time.Delta / CameraRollSmoothing).Clamp(-CameraRollAngleLimit, CameraRollAngleLimit);
 			angles = angles + new Angles(0, 0, sidetiltLerp);
