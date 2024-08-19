@@ -640,6 +640,7 @@ public sealed class PlayerController : Component
 		if (IsOnGround && (GroundedTime <= (float.MaxValue / 2f))) GroundedTime += Time.Delta;
 
 		CrouchSpeed = (float)MeterToU(2.5);
+		AutoBunnyhopping = false;
 
 		StandingHeight = 72f;
 
