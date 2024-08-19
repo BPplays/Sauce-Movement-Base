@@ -258,7 +258,9 @@ public sealed class PlayerController : Component
 		slide_time = 0.0;
 	}
 
-	private void crouch(string crouch_in) {
+
+	string crouch_in = "Slow";
+	private void crouch() {
 		var st_cr = IsCrouching;
 		//if (IsCrouching && IsOnGround) can_slide = false;
 		if (MeterToU(Velocity.WithZ(0).Length) < 5) can_slide = false;
@@ -290,7 +292,6 @@ public sealed class PlayerController : Component
 
 		var ToggleFric = true;
 
-		var crouch_in = "Slow";
 		var tfric_in = "Duck";
 
 		if (Input.Pressed("Test_speed")) {test_speed = true; Log.Info("t");}
@@ -310,13 +311,14 @@ public sealed class PlayerController : Component
 		// }
 
 
-		crouch(crouch_in);
+		crouch();
 
 
 		if (Input.Pressed(crouch_in) || Input.Released(crouch_in)) CrouchTime += CrouchCost;
 
 		if (!IsOnGround && Input.Pressed("Jump")) {
 			bufferj_time = bufferj_time_start;
+			Log.Info(bufferj_time.ToString());
 		}
 	}
 
@@ -511,6 +513,8 @@ public sealed class PlayerController : Component
 
 		if (((AutoBunnyhopping && Input.Down("Jump")) || Input.Pressed("Jump")) || bufferj_time > 0) {
 
+			if (bufferj_time > 0) bufferj_time = 0;
+
 			IsSliding = false;
 			var look_vel = LookAngleAngles.WithPitch(0).Forward;
 			var velxy = new Vector2(Velocity.x, Velocity.y);
@@ -631,6 +635,7 @@ public sealed class PlayerController : Component
 	float GroundedTime = 0;
 
 	protected override void OnUpdate() {
+		bufferj_time_start = 0.15;
 
 		if (IsOnGround && (GroundedTime <= (float.MaxValue / 2f))) GroundedTime += Time.Delta;
 
@@ -722,7 +727,7 @@ public sealed class PlayerController : Component
 				CanSlide();
 				slide_time = 0.0;
 
-				GatherInput();
+				crouch();
 				var heightMult = Math.Abs(jumpHighestHeight - GameObject.Transform.Position.z) / 46f;
 				Stamina -= Stamina * StaminaLandingCost * 2.9625f * heightMult.Clamp(0, 1f);
 				Stamina = (Stamina * 10).FloorToInt() * 0.1f;
