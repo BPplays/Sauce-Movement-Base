@@ -118,6 +118,10 @@ public sealed class PlayerController : Component
 		}
 	}
 
+	private static double Lerp(double a, double b, double t) {
+		return a + (b - a) * t;
+	}
+
 	// Character Controller Functions
 
 	private void Move(bool step) {
@@ -139,7 +143,11 @@ public sealed class PlayerController : Component
 		Vector3 position = base.GameObject.Transform.Position;
 		CharacterControllerHelper characterControllerHelper = new CharacterControllerHelper(BuildTrace(position, position), position, Velocity);
 		characterControllerHelper.Bounce = 0;
-		characterControllerHelper.MaxStandableAngle = 45.5f;
+		var max_stand_angle_lerp = Math.Clamp(UtoMeter((double)Velocity.Length) / 45, 0, 1);
+		var max_stand_angle_min = 45.5;
+		var max_stand_angle_max = 20;
+		max_stand_angle = Lerp(max_stand_angle_min, max_stand_angle_max, max_stand_angle_lerp);
+		characterControllerHelper.MaxStandableAngle = (float)max_stand_angle;
 		if (step && IsOnGround)
 		{
 			characterControllerHelper.TryMoveWithStep(Time.Delta, 18f * GameObject.Transform.Scale.z);
@@ -197,6 +205,8 @@ public sealed class PlayerController : Component
 		return true;
 	}
 
+	double max_stand_angle = 20;
+
 	private void CategorizePosition() {
 		Vector3 position = base.Transform.Position;
 		Vector3 to = position + Vector3.Down * 2f;
@@ -212,7 +222,7 @@ public sealed class PlayerController : Component
 
 		to.z -= (IsOnGround ? 18 : 0.1f);
 		SceneTraceResult sceneTraceResult = BuildTrace(from, to).Run();
-		if (!sceneTraceResult.Hit || Vector3.GetAngle(in Vector3.Up, in sceneTraceResult.Normal) > 5.5) {
+		if (!sceneTraceResult.Hit || Vector3.GetAngle(in Vector3.Up, in sceneTraceResult.Normal) > max_stand_angle) {
 			ClearGround();
 			return;
 		} else {
