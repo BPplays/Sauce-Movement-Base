@@ -131,6 +131,8 @@ public sealed class PlayerController : Component
 
 	// Character Controller Functions
 
+	float base_hi = 0;
+
 	private void Move(bool step) {
 
 		if (step && IsOnGround) {
@@ -150,11 +152,17 @@ public sealed class PlayerController : Component
 		CharacterControllerHelper characterControllerHelper = new CharacterControllerHelper(BuildTrace(position, position), position, Velocity);
 		characterControllerHelper.Bounce = 0;
 
-		var max_stand_angle_lerp = range(UtoMeter(Velocity.Length), 15, 40);
+		var max_stand_angle_lerp = range(UtoMeter(Velocity.Length), UtoMeter(MoveSpeed), 65);
 		var max_stand_angle_min = 45.5;
-		var max_stand_angle_max = 5;
-		max_stand_angle = Lerp(max_stand_angle_min, max_stand_angle_max, max_stand_angle_lerp);
+		var max_stand_angle_max = 10;
+		max_stand_angle = Lerp(max_stand_angle_min, max_stand_angle_max, Math.Pow(max_stand_angle_lerp, 0.1));
 		characterControllerHelper.MaxStandableAngle = (float)max_stand_angle;
+
+		// for (int i = 10; i < 100; i += 10) {
+		// 	max_stand_angle_lerp = range(i, UtoMeter(MoveSpeed), 55);
+		// 	max_stand_angle = Lerp(max_stand_angle_min, max_stand_angle_max, Math.Pow(max_stand_angle_lerp, 0.5));
+		// 	Log.Info(i.ToString()+": "+max_stand_angle.ToString());
+		// }
 
 		if (step && IsOnGround) {
 			characterControllerHelper.TryMoveWithStep(Time.Delta, 18f * GameObject.Transform.Scale.z);
@@ -172,17 +180,17 @@ public sealed class PlayerController : Component
 		Velocity = characterControllerHelper.Velocity;
 	}
 
-	private void Move()
-	{
-		if (!TryUnstuck())
-		{
-			if (IsOnGround)
-			{
+	private void Move() {
+		if (!TryUnstuck()) {
+			if (IsOnGround) {
 				Move(step: true);
 			}
-			else
-			{
-				Move(step: false);
+			else {
+				if (Velocity.z > 0) {
+					Move(step: false);
+				} else {
+					Move(step: false);
+				}
 			}
 		}
 	}
@@ -215,7 +223,7 @@ public sealed class PlayerController : Component
 
 	private void CategorizePosition() {
 		Vector3 position = base.Transform.Position;
-		Vector3 to = position + Vector3.Down * 2f;
+		Vector3 to = position + Vector3.Down * 1f;
 		//Vector3 to = position;
 		Vector3 from = position;
 		//bool isOnGround = IsOnGround;
@@ -226,14 +234,16 @@ public sealed class PlayerController : Component
 			OnGround();
 		}
 
-		to.z -= (IsOnGround ? 18 : 0.1f);
+		// to.z -= (IsOnGround ? 18 : 0.1f);
+		to.z -= 0.0f;
 		SceneTraceResult sceneTraceResult = BuildTrace(from, to).Run();
 		if (!sceneTraceResult.Hit || Vector3.GetAngle(in Vector3.Up, in sceneTraceResult.Normal) > max_stand_angle) {
 			ClearGround();
-			return;
+			//return;
 		} else {
 			OnGround();
 		}
+
 
 
 		//if (Velocity.Normal.z < 0) OnGround(); else isOnGround = false;
@@ -242,10 +252,29 @@ public sealed class PlayerController : Component
 		// GroundObject = sceneTraceResult.GameObject;
 		// GroundCollider = sceneTraceResult.Shape?.Collider as Collider;
 
-		if ((IsOnGround && !sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f) || true) { // for some reason this fixes sliding down slopes when standing still, idek
-			base.Transform.Position = sceneTraceResult.HitPosition + (Vector3.Down * (from - to)) + (Vector3.Down * 0.1f);
+		if ((IsOnGround && !sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f) || false) { // for some reason this fixes sliding down slopes when standing still, idek
+			//base.Transform.Position = sceneTraceResult.HitPosition + (Vector3.Down * (from - to)) + (Vector3.Down * 0f);
+			base.Transform.Position = sceneTraceResult.EndPosition + sceneTraceResult.Normal * 0f;
 			OnGround();
 		}
+
+		// if ((!IsOnGround && !sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f) || false) { // for some reason this fixes sliding down slopes when standing still, idek
+		// 	//base.Transform.Position = sceneTraceResult.HitPosition + (Vector3.Down * (from - to)) + (Vector3.Down * 0f);
+		// 	base.Transform.Position = sceneTraceResult.EndPosition + sceneTraceResult.Normal * 0f;
+		// 	ClearGround();
+		// }
+
+		// if (base_hi != 0) StandingHeight = base_hi;
+		// base_hi = StandingHeight;
+		// Height = (from.z - to.z)+20f;
+
+		// if ((!IsOnGround && !sceneTraceResult.StartedSolid && sceneTraceResult.Fraction > 0f && sceneTraceResult.Fraction < 1f) || false) { // for some reason this fixes sliding down slopes when standing still, idek
+		// 	base.Transform.Position = sceneTraceResult.HitPosition + (Vector3.Down * (from - to)) + (Vector3.Down * 0.1f);
+		// 	ClearGround();
+		// 	var t = Velocity;
+		// 	t.z = 0;
+		// 	Velocity = t;
+		// }
 	}
 
 	private SceneTrace BuildTrace(Vector3 from, Vector3 to) {
@@ -305,7 +334,7 @@ public sealed class PlayerController : Component
 
 		var rot = LookAngleAngles.WithPitch(0).ToRotation();
 		WishDir = (rot.Forward * Input.AnalogMove.x) + (rot.Left * Input.AnalogMove.y);
-		if (!WishDir.IsNearZeroLength) WishDir = WishDir.Normal;
+		if (!WishDir.IsNearZeroLength) WishDir = WishDir.Normal ;
 
 		var ToggleFric = true;
 
@@ -673,6 +702,7 @@ public sealed class PlayerController : Component
 		CustomGravity = Vector3.Down * (float)MeterToU(9.80665);
 
 		Camera.ZFar = 200000;
+		//Camera.ZNear = 20;
 
 
 		if (CollisionBox == null) return;
@@ -816,6 +846,7 @@ public sealed class PlayerController : Component
 			return;
 
 		BodyRenderer.RenderType = ModelRenderer.ShadowRenderType.ShadowsOnly;
+		BodyRenderer.Enabled = false;
 
 		// var ControllerInput = Input.GetAnalog(InputAnalog.Look);
 		// if (ControllerInput.Length > 1) ControllerInput = ControllerInput.Normal;
