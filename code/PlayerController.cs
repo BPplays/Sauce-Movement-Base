@@ -170,7 +170,11 @@ public sealed class PlayerController : Component
 		else {
 			//characterControllerHelper.TryMove(Time.Delta);
 			// var Velocity_bu = Velocity;
-			characterControllerHelper.TryMoveWithStep(Time.Delta, 2f * GameObject.Transform.Scale.z);
+			if (stand_angl > max_stand_angle) {
+				characterControllerHelper.TryMoveWithStep(Time.Delta, 18f * GameObject.Transform.Scale.z);
+			} else {
+				characterControllerHelper.TryMoveWithStep(Time.Delta, 2f * GameObject.Transform.Scale.z);
+			}
 			IsOnGround = false;
 			// characterControllerHelper.Velocity = Velocity_bu;
 			// Velocity = Velocity_bu;
@@ -220,6 +224,7 @@ public sealed class PlayerController : Component
 	}
 
 	double max_stand_angle = 20;
+	float stand_angl = 0;
 
 	private void CategorizePosition() {
 		Vector3 position = base.Transform.Position;
@@ -243,6 +248,7 @@ public sealed class PlayerController : Component
 		} else {
 			OnGround();
 		}
+		stand_angl = Vector3.GetAngle(in Vector3.Up, in sceneTraceResult.Normal);
 
 
 
