@@ -152,7 +152,7 @@ public sealed class PlayerController : Component
 		CharacterControllerHelper characterControllerHelper = new CharacterControllerHelper(BuildTrace(position, position), position, Velocity);
 		characterControllerHelper.Bounce = 0;
 
-		var max_stand_angle_lerp = range(UtoMeter(Velocity.Length), UtoMeter(MoveSpeed), 65);
+		var max_stand_angle_lerp = range(UtoMeter(Velocity.Length), UtoMeter(MoveSpeed), 55);
 		var max_stand_angle_min = 45.5;
 		var max_stand_angle_max = 10;
 		max_stand_angle = Lerp(max_stand_angle_min, max_stand_angle_max, Math.Pow(max_stand_angle_lerp, 0.1));
