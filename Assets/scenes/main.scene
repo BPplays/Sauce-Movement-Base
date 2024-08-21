@@ -12,7 +12,7 @@
           "__guid": "2fd47049-d703-4230-8e00-ef6243725c6e",
           "__version": 1,
           "EnableCollision": true,
-          "MapName": "facepunch.construct23",
+          "MapName": "softsplit.gm_bigcity",
           "NoOrigin": true,
           "UseMapFromLaunch": false
         },
@@ -139,7 +139,7 @@
   "SceneProperties": {
     "FixedUpdateFrequency": 64,
     "MaxFixedUpdates": 5,
-    "NetworkFrequency": 32,
+    "NetworkFrequency": 256,
     "NetworkInterpolation": true,
     "ThreadedAnimation": true,
     "TimeScale": 1,

@@ -52,13 +52,17 @@ public sealed class PlayerController : Component
 
 	// State Bools
 	[Sync] public bool IsCrouching {get;set;} = false;
-	public bool IsNoFric = false;
+	[Sync] public bool IsNoFric {get;set;} = false;
 	[Sync] public bool IsOnGround {get;set;} = false;
+	[Sync] public bool IsSliding {get;set;} = false;
+	[Sync] public double slide_time {get;set;} = 0.0;
 
 	// Internal objects
 	private CitizenAnimationHelper animationHelper;
 	private CameraComponent Camera;
 	private ModelRenderer BodyRenderer;
+
+	[Sync] public bool trig_jmp {get;set;} = false;
 
 	// Internal Variables
 	public float Stamina = 80f;
@@ -94,8 +98,8 @@ public sealed class PlayerController : Component
 	[Property, ToggleGroup("CameraRollEnabled")] float CameraRollAngleLimit {get;set;} = 30f;
 	float sidetiltLerp = 0f;
 
-	bool IsSliding = false;
-	double slide_time = 0.0;
+	//bool IsSliding = false;
+	//double slide_time = 0.0;
 	bool IsRampSliding = false;
 
 	// Fucntions to make things slightly nicer
@@ -152,9 +156,9 @@ public sealed class PlayerController : Component
 		CharacterControllerHelper characterControllerHelper = new CharacterControllerHelper(BuildTrace(position, position), position, Velocity);
 		characterControllerHelper.Bounce = 0;
 
-		var max_stand_angle_lerp = range(UtoMeter(Velocity.Length), UtoMeter(MoveSpeed), 55);
+		var max_stand_angle_lerp = range(UtoMeter(Velocity.Length), UtoMeter(MoveSpeed), 50);
 		var max_stand_angle_min = 45.5;
-		var max_stand_angle_max = 10;
+		var max_stand_angle_max = 7;
 		max_stand_angle = Lerp(max_stand_angle_min, max_stand_angle_max, Math.Pow(max_stand_angle_lerp, 0.1));
 		characterControllerHelper.MaxStandableAngle = (float)max_stand_angle;
 
@@ -170,10 +174,15 @@ public sealed class PlayerController : Component
 		else {
 			//characterControllerHelper.TryMove(Time.Delta);
 			// var Velocity_bu = Velocity;
-			if (stand_angl > max_stand_angle) {
+			if (slide_angl || stand_angl > max_stand_angle) {
 				characterControllerHelper.TryMoveWithStep(Time.Delta, 18f * GameObject.Transform.Scale.z);
+				//Log.Info("stdangl max: "+ stand_angl);
+			} else if (Velocity.WithZ(0).Length > MeterToU(MoveSpeed + 2)) {
+				characterControllerHelper.TryMoveWithStep(Time.Delta, 4f * GameObject.Transform.Scale.z);
 			} else {
-				characterControllerHelper.TryMoveWithStep(Time.Delta, 2f * GameObject.Transform.Scale.z);
+				// characterControllerHelper.TryMoveWithStep(Time.Delta, 2f * GameObject.Transform.Scale.z);
+				characterControllerHelper.TryMove(Time.Delta);
+				// Log.Info("stdangl max: "+ stand_angl);
 			}
 			IsOnGround = false;
 			// characterControllerHelper.Velocity = Velocity_bu;
@@ -225,30 +234,43 @@ public sealed class PlayerController : Component
 
 	double max_stand_angle = 20;
 	float stand_angl = 0;
+	bool slide_angl = false;
 
 	private void CategorizePosition() {
 		Vector3 position = base.Transform.Position;
 		Vector3 to = position + Vector3.Down * 1f;
 		//Vector3 to = position;
 		Vector3 from = position;
+		slide_angl = false;
 		//bool isOnGround = IsOnGround;
-		if (!IsOnGround && (Velocity.z > 4f)) {
-			ClearGround();
-			return;
-		} else {
-			OnGround();
-		}
+		// if (!IsOnGround && (Velocity.z > 4f)) {
+		// 	ClearGround();
+		// 	return;
+		// } else {
+		// 	OnGround();
+		// }
 
 		// to.z -= (IsOnGround ? 18 : 0.1f);
 		to.z -= 0.0f;
+
 		SceneTraceResult sceneTraceResult = BuildTrace(from, to).Run();
-		if (!sceneTraceResult.Hit || Vector3.GetAngle(in Vector3.Up, in sceneTraceResult.Normal) > max_stand_angle) {
+
+		stand_angl = Vector3.GetAngle(in Vector3.Up, in sceneTraceResult.Normal);
+		if (!sceneTraceResult.Hit || stand_angl > max_stand_angle) {
 			ClearGround();
+			slide_angl = true;
+			if (stand_angl == 90) stand_angl = 0;
+			// if (stand_angl > max_stand_angle) {
+			// 	Log.Info("stdangl: "+ stand_angl+" max: "+max_stand_angle);
+			// }
+
 			//return;
 		} else {
 			OnGround();
+			// Log.Info("stdangl: "+ stand_angl+" max: "+max_stand_angle);
 		}
-		stand_angl = Vector3.GetAngle(in Vector3.Up, in sceneTraceResult.Normal);
+		// Log.Info(stand_angl);
+		//if (sceneTraceResult.Normal == Vector3.Zero) stand_angl = 0;
 
 
 
@@ -346,7 +368,7 @@ public sealed class PlayerController : Component
 
 		var tfric_in = "Duck";
 
-		if (Input.Pressed("Test_speed")) {test_speed = true; Log.Info("t");}
+		if (Input.Pressed("Test_speed")) {animationHelper.TriggerJump();}
 		if (Input.Pressed("Test_speed2")) {test_speed2 = true; Log.Info("t");}
 		if (Input.Pressed("Test_speed3")) {test_speed3 = true; Log.Info("t");}
 
@@ -398,6 +420,10 @@ public sealed class PlayerController : Component
 		} else {
 			animationHelper.Sitting = CitizenAnimationHelper.SittingStyle.None;
 		}
+		// if (trig_jmp) {
+		// 	animationHelper.TriggerJump();
+		// 	trig_jmp = false;
+		// };
 
 		animationHelper.AimAngle = SmoothLookAngleAngles.ToRotation();
 		animationHelper.IsGrounded = IsOnGround;
@@ -632,7 +658,7 @@ public sealed class PlayerController : Component
 				Log.Info("addvec: "+addvec.ToString());
 				Log.Info("newspeed: "+newspeed.ToString());
 				Log.Info("delta: "+Time.Delta.ToString());
-
+				animationHelper.TriggerJump();
 				if (mult_loss > 0) Velocity *= mult_loss;
 				Velocity += addvec;
 				if (usenvec) Velocity = nvec;
@@ -642,13 +668,13 @@ public sealed class PlayerController : Component
 
 			jumpStartHeight = GameObject.Transform.Position.z;
 			jumpHighestHeight = GameObject.Transform.Position.z;
-			animationHelper.TriggerJump();
+
 			Punch(new Vector3(0, 0, JumpForce * StaminaMultiplier));
 			Stamina -= Stamina * StaminaJumpCost * 2.9625f;
 			Stamina = (Stamina * 10).FloorToInt() * 0.1f;
 			if (Stamina < 0) Stamina = 0;
 		}
-		CategorizePosition();
+		//CategorizePosition();
 	}
 
 	private void AirMove() {
@@ -673,6 +699,8 @@ public sealed class PlayerController : Component
 
 		Height = StandingHeight;
 		HeightGoal = StandingHeight;
+
+		Transform.World = Random.Shared.FromArray( Game.ActiveScene.GetAllComponents<SpawnPoint>().Select( x => x.Transform.World ).ToArray(), global::Transform.Zero );
 	}
 
 	protected override void OnFixedUpdate() {
@@ -687,6 +715,10 @@ public sealed class PlayerController : Component
 	float GroundedTime = 0;
 
 	protected override void OnUpdate() {
+		var debug = false;
+		// if (debug) {
+		// 	Log = LogLevel.Warn;
+		// }
 		bufferj_time_start = 0.15;
 
 		if (IsOnGround && (GroundedTime <= (float.MaxValue / 2f))) GroundedTime += Time.Delta;
@@ -694,7 +726,6 @@ public sealed class PlayerController : Component
 		CrouchSpeed = (float)MeterToU(2.5);
 		AutoBunnyhopping = false;
 
-		StandingHeight = 72f;
 
 
 		UseCustomFOV = true;
@@ -718,8 +749,6 @@ public sealed class PlayerController : Component
 			CollisionBox.Center = new Vector3(0, 0, LastSize.z * 0.5f);
 		}
 
-		if ( IsProxy )
-			return;
 
 		if (UseCustomGravity) {
 			Gravity = CustomGravity;
@@ -727,7 +756,9 @@ public sealed class PlayerController : Component
 			Gravity = Scene.PhysicsWorld.Gravity;
 		}
 
-		GatherInput();
+		if (!IsProxy) {
+			GatherInput();
+		}
 
 		if (!IsSliding) {
 			slide_time = 0.0;
@@ -795,33 +826,34 @@ public sealed class PlayerController : Component
 		}
 
 		//ui_velo = ui_velo.LerpTo(Velocity, Time.Delta / 2);
-		update_spedometer();
+		if (!IsProxy) {
+			update_spedometer();
+			AlreadyGrounded = IsOnGround;
 
-		AlreadyGrounded = IsOnGround;
+			CrouchTime -= Time.Delta * CrouchRecoveryRate;
+			CrouchTime = CrouchTime.Clamp(0f, MaxCrouchTime);
 
-		CrouchTime -= Time.Delta * CrouchRecoveryRate;
-		CrouchTime = CrouchTime.Clamp(0f, MaxCrouchTime);
+			Stamina += StaminaRecoveryRate * Time.Delta;
+			if (Stamina > MaxStamina) Stamina = MaxStamina;
 
-		Stamina += StaminaRecoveryRate * Time.Delta;
-		if (Stamina > MaxStamina) Stamina = MaxStamina;
+			if (HeightDiff > 0f) GameObject.Transform.Position += new Vector3(0, 0, HeightDiff * 0.5f);
+			Velocity *= GameObject.Transform.Scale;
+			Move();
+			CategorizePosition();
+			Velocity /= GameObject.Transform.Scale;
 
-		if (HeightDiff > 0f) GameObject.Transform.Position += new Vector3(0, 0, HeightDiff * 0.5f);
-		Velocity *= GameObject.Transform.Scale;
-		Move();
-		CategorizePosition();
-		Velocity /= GameObject.Transform.Scale;
+			Velocity += Gravity * Time.Delta * 0.5f;
 
-		Velocity += Gravity * Time.Delta * 0.5f;
+			// Terminal velocity
+			var term_vel = 9999999;
+			if (Velocity.Length > term_vel) Velocity = Velocity.Normal * term_vel;
 
-		// Terminal velocity
-		var term_vel = 9999999;
-		if (Velocity.Length > term_vel) Velocity = Velocity.Normal * term_vel;
+			if (jumpHighestHeight < GameObject.Transform.Position.z) jumpHighestHeight = GameObject.Transform.Position.z;
 
-		if (jumpHighestHeight < GameObject.Transform.Position.z) jumpHighestHeight = GameObject.Transform.Position.z;
-
-		can_slide = false;
-		if (!IsCrouching && Velocity.Length > MeterToU(4)) {
-			can_slide = true;
+			can_slide = false;
+			if (!IsCrouching && Velocity.Length > MeterToU(4)) {
+				can_slide = true;
+			}
 		}
 
 		if (IsSliding) {
@@ -879,6 +911,7 @@ public sealed class PlayerController : Component
 		}
 
 		if (!IsOnGround) GroundedTime = 0f;
+
 	}
 
 }
